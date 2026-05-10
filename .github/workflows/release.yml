@@ -1,10 +1,15 @@
 name: Release Builder
 
 on:
-  workflow_dispatch: # دستی
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version Tag (e.g., v0.1.0)'
+        required: true
+        default: 'v0.1.0'
   push:
     tags:
-      - 'v*' # زمانی که تگ زده شود (مثلاً v1.0)
+      - 'v*'
 
 jobs:
   release:
@@ -65,14 +70,15 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           files: assets/*
-          name: Release ${{ github.ref_name != '' && github.ref_name || 'Manual' }}
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: Release ${{ github.event.inputs.version || github.ref_name }}
           body: |
             Automatically generated release.
             
             **Latest Changes:**
             ${{ steps.commit_msg.outputs.message }}
             
-            **Version:** ${{ github.ref_name != '' && github.ref_name || 'Manual-Build' }}
+            **Version:** ${{ github.event.inputs.version || github.ref_name }}
           draft: false
           prerelease: false
         env:
