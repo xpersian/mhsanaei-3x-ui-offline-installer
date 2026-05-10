@@ -21,7 +21,7 @@ pub fn render(config: &BuildConfig) -> Result<()> {
     }
 
     println!(
-        "  {} install.sh تولید شد → {}",
+        "  {} install.sh generated → {}",
         style("✓").green(),
         style(&dest).yellow().bold()
     );
@@ -44,7 +44,7 @@ fn build_script(c: &BuildConfig) -> String {
     // ── SSL section ───────────────────────────────────────────────────────────
     let ssl_section = build_ssl_section(c);
     let ssl_call = match &c.ssl {
-        SslConfig::None => "# SSL غیرفعال است".to_string(),
+        SslConfig::None => "# SSL is disabled".to_string(),
         _               => "setup_ssl".to_string(),
     };
 
@@ -64,9 +64,9 @@ fn build_script(c: &BuildConfig) -> String {
 
     s.push_str("#!/bin/bash\n");
     s.push_str("# ============================================================\n");
-    s.push_str(&format!("# 3x-ui Offline Installer — سفارشی‌شده توسط xui-offline-builder\n"));
-    s.push_str(&format!("# سیستم‌عامل هدف : {}\n", c.os.display_name()));
-    s.push_str(&format!("# معماری          : {}\n", arch_suffix));
+    s.push_str(&format!("# 3x-ui Offline Installer — Customized by xui-offline-builder\n"));
+    s.push_str(&format!("# Target OS      : {}\n", c.os.display_name()));
+    s.push_str(&format!("# Architecture   : {}\n", arch_suffix));
     s.push_str("# ============================================================\n");
     s.push_str("set -e\n\n");
 
@@ -76,7 +76,7 @@ fn build_script(c: &BuildConfig) -> String {
     s.push_str("yellow='\\033[0;33m'\n");
     s.push_str("plain='\\033[0m'\n\n");
 
-    s.push_str("# مسیر bundle\n");
+    s.push_str("# Bundle path\n");
     s.push_str("BUNDLE_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n\n");
 
     s.push_str("xui_folder=\"/usr/local/x-ui\"\n");
@@ -89,26 +89,26 @@ fn build_script(c: &BuildConfig) -> String {
     }
 
     s.push('\n');
-    s.push_str("# ── بررسی root ──────────────────────────────────────────────\n");
-    s.push_str("[[ $EUID -ne 0 ]] && echo -e \"${red}خطا: این اسکریپت باید با دسترسی root اجرا شود.${plain}\" && exit 1\n\n");
+    s.push_str("# ── Root Check ──────────────────────────────────────────────\n");
+    s.push_str("[[ $EUID -ne 0 ]] && echo -e \"${red}Error: This script must be run as root.${plain}\" && exit 1\n\n");
 
-    s.push_str("echo -e \"${green}شروع نصب 3x-ui (نسخه آفلاین)...${plain}\"\n\n");
+    s.push_str("echo -e \"${green}Starting 3x-ui installation (Offline version)...${plain}\"\n\n");
 
     // Package functions
-    s.push_str("# ── نصب پکیج‌های سیستمی ──────────────────────────────────────\n");
+    s.push_str("# ── System Package Installation ─────────────────────────────\n");
     s.push_str(&pkg_section);
     s.push_str("\n\n");
     s.push_str(&format!("{}\n\n", install_call));
 
     // Stop old service
-    s.push_str("# ── متوقف کردن سرویس قبلی ────────────────────────────────────\n");
+    s.push_str("# ── Stopping Previous Service ───────────────────────────────\n");
     s.push_str(&service_stop);
     s.push_str("\n");
     s.push_str("rm -rf \"$xui_folder\" 2>/dev/null || true\n\n");
 
     // Extract binary
-    s.push_str("# ── استخراج باینری x-ui ─────────────────────────────────────\n");
-    s.push_str("echo -e \"${green}نصب باینری x-ui...${plain}\"\n");
+    s.push_str("# ── Extracting x-ui Binary ──────────────────────────────────\n");
+    s.push_str("echo -e \"${green}Installing x-ui binary...${plain}\"\n");
     s.push_str("mkdir -p \"$(dirname \"$xui_folder\")\"\n");
     s.push_str(&format!(
         "tar zxf \"$BUNDLE_DIR/x-ui-linux-{}.tar.gz\" -C \"$(dirname \"$xui_folder\")\"\n",
@@ -123,29 +123,29 @@ fn build_script(c: &BuildConfig) -> String {
     s.push_str("chmod +x \"$xui_folder/bin/\"* 2>/dev/null || true\n\n");
 
     // CLI manager
-    s.push_str("# ── نصب CLI manager ──────────────────────────────────────────\n");
+    s.push_str("# ── Installing CLI manager ──────────────────────────────────\n");
     s.push_str("cp \"$BUNDLE_DIR/x-ui.sh\" /usr/bin/x-ui\n");
     s.push_str("chmod +x /usr/bin/x-ui\n");
     s.push_str("mkdir -p /var/log/x-ui\n\n");
 
     // Panel config
-    s.push_str("# ── پیکربندی پنل ─────────────────────────────────────────────\n");
-    s.push_str("echo -e \"${green}پیکربندی تنظیمات پنل...${plain}\"\n");
+    s.push_str("# ── Panel Configuration ─────────────────────────────────────\n");
+    s.push_str("echo -e \"${green}Configuring panel settings...${plain}\"\n");
     s.push_str(&format!(
         "\"$xui_folder/x-ui\" setting -username \"{}\" -password \"{}\" -port \"{}\" -webBasePath \"{}\" > /dev/null 2>&1\n\n",
         c.panel_username, c.panel_password, c.panel_port, c.panel_web_base_path
     ));
 
     // SSL
-    s.push_str("# ── تنظیم SSL ──────────────────────────────────────────────\n");
+    s.push_str("# ── SSL Configuration ───────────────────────────────────────\n");
     s.push_str(&ssl_section);
     s.push('\n');
     s.push_str(&ssl_call);
     s.push_str("\n\n");
 
     // Service install
-    s.push_str("# ── نصب و فعال‌سازی سرویس ────────────────────────────────────\n");
-    s.push_str("echo -e \"${green}فعال‌سازی سرویس x-ui...${plain}\"\n");
+    s.push_str("# ── Service Installation & Activation ───────────────────────\n");
+    s.push_str("echo -e \"${green}Activating x-ui service...${plain}\"\n");
     s.push_str(&service_install);
     s.push_str("\n\n");
 
@@ -158,24 +158,24 @@ fn build_script(c: &BuildConfig) -> String {
     // Final output
     s.push_str("echo \"\"\n");
     s.push_str("echo -e \"${green}═══════════════════════════════════════════${plain}\"\n");
-    s.push_str("echo -e \"${green}        نصب 3x-ui با موفقیت انجام شد!      ${plain}\"\n");
+    s.push_str("echo -e \"${green}        3x-ui installed successfully!      ${plain}\"\n");
     s.push_str("echo -e \"${green}═══════════════════════════════════════════${plain}\"\n");
-    s.push_str(&format!("echo -e \"${{green}}نام کاربری: {}${{plain}}\"\n", c.panel_username));
-    s.push_str(&format!("echo -e \"${{green}}رمز عبور:  {}${{plain}}\"\n", c.panel_password));
-    s.push_str(&format!("echo -e \"${{green}}پورت:      {}${{plain}}\"\n", c.panel_port));
+    s.push_str(&format!("echo -e \"${{green}}Username: {}${{plain}}\"\n", c.panel_username));
+    s.push_str(&format!("echo -e \"${{green}}Password: {}${{plain}}\"\n", c.panel_password));
+    s.push_str(&format!("echo -e \"${{green}}Port:     {}${{plain}}\"\n", c.panel_port));
     s.push_str(&format!("echo -e \"${{green}}WebPath:   {}${{plain}}\"\n", c.panel_web_base_path));
     
     let protocol = match c.ssl { SslConfig::None => "http", _ => "https" };
     s.push_str(&format!(
-        "echo -e \"${{green}}لینک دسترسی: {}://{}:{}/{}${{plain}}\"\n",
+        "echo -e \"${{green}}Access Link: {}://{}:{}/{}${{plain}}\"\n",
         protocol, c.server_host, c.panel_port, c.panel_web_base_path
     ));
 
-    s.push_str("echo -e \"${yellow}⚠ این اطلاعات را ایمن نگه دارید!${plain}\"\n");
+    s.push_str("echo -e \"${yellow}⚠ Keep this information secure!${plain}\"\n");
 
     s.push_str("echo -e \"${green}═══════════════════════════════════════════${plain}\"\n");
     s.push_str("echo \"\"\n");
-    s.push_str("echo -e \"دستورات مدیریت:\"\n");
+    s.push_str("echo -e \"Management Commands:\"\n");
     s.push_str("echo -e \"  x-ui start / stop / restart / status / log\"\n");
 
     s
@@ -194,14 +194,14 @@ fn build_pkg_section(c: &BuildConfig) -> String {
             let offline_cmd = os_detect::install_command_offline(&c.os, &fmt);
             let mut s = String::new();
             s.push_str("install_base_offline() {\n");
-            s.push_str("    echo \"نصب پکیج‌ها از bundle آفلاین...\"\n");
+            s.push_str("    echo \"Installing packages from offline bundle...\"\n");
             s.push_str("    cd \"$BUNDLE_DIR\"\n");
             for line in offline_cmd.lines() {
                 s.push_str(&format!("    {}\n", line));
             }
             s.push_str("}\n");
             s.push_str("install_base_online() {\n");
-            s.push_str("    echo \"fallback آنلاین برای پکیج‌های جاافتاده...\"\n");
+            s.push_str("    echo \"Online fallback for missing packages...\"\n");
             s.push_str(&format!("    {} || true\n", online_cmd));
             s.push_str("}");
             s
@@ -212,7 +212,7 @@ fn build_pkg_section(c: &BuildConfig) -> String {
 fn build_ssl_section(c: &BuildConfig) -> String {
     match &c.ssl {
         SslConfig::None => {
-            "# SSL غیرفعال — پنل روی HTTP اجرا می‌شود\n".to_string()
+            "# SSL Disabled — Panel runs on HTTP\n".to_string()
         }
         SslConfig::Custom { .. } | SslConfig::SelfSigned { .. } => {
             let mut s = String::new();
@@ -226,7 +226,7 @@ fn build_ssl_section(c: &BuildConfig) -> String {
             s.push_str("    /usr/local/x-ui/x-ui cert \\\n");
             s.push_str("        -webCert \"$cert_dest/fullchain.pem\" \\\n");
             s.push_str("        -webCertKey \"$cert_dest/privkey.pem\" > /dev/null 2>&1 || true\n");
-            s.push_str("    echo \"  SSL گواهی نصب شد\"\n");
+            s.push_str("    echo \"  SSL certificate installed\"\n");
             s.push_str("}\n");
             s
         }

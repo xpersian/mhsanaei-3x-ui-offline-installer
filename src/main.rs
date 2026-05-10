@@ -30,14 +30,14 @@ async fn main() -> Result<()> {
             ResumeAction::Edited(manifest, needs_redownload) => {
                 if needs_redownload {
                     println!(
-                        "  {} بازسازی فایل‌های SSL...",
+                        "  {} Regenerating SSL files...",
                         style("→").cyan()
                     );
                     run_download_and_generate_from_manifest(manifest, default_out).await?;
                 } else {
                     println!(
-                        "  {} install.sh از قبل بازسازی شد.",
-                        style("✓").green()
+                        "  {} install.sh was already regenerated.",
+                        style("→").green()
                     );
                     print_done(default_out);
                 }
@@ -45,14 +45,14 @@ async fn main() -> Result<()> {
             }
             ResumeAction::Restart => {
                 println!(
-                    "\n  {} شروع مجدد — wizard کامل اجرا می‌شود...\n",
+                    "\n  {} Restarting — full wizard starting...\n",
                     style("→").cyan()
                 );
                 run_full_wizard().await?;
                 return Ok(());
             }
             ResumeAction::Exit => {
-                println!("  {} خروج.", style("→").dim());
+                println!("  {} Exiting.", style("→").dim());
                 return Ok(());
             }
         }
@@ -92,13 +92,13 @@ async fn run_download_and_generate(
     out: &str,
 ) -> Result<()> {
     println!("\n{}", style("━".repeat(54)).cyan());
-    println!("{}", style("  📦  شروع دانلود فایل‌های مورد نیاز...").cyan().bold());
+    println!("{}", style("  📦  Starting download of required files...").cyan().bold());
     println!("{}\n", style("━".repeat(54)).cyan());
 
     downloader::download_all(config, manifest).await?;
 
     println!("\n{}", style("━".repeat(54)).cyan());
-    println!("{}", style("  ⚙️   در حال ساخت install.sh آفلاین...").cyan().bold());
+    println!("{}", style("  ⚙️   Building offline install.sh...").cyan().bold());
     println!("{}\n", style("━".repeat(54)).cyan());
 
     generator::build(config).await?;
@@ -129,30 +129,30 @@ fn print_banner() {
     println!("{}", style("╔══════════════════════════════════════════════════╗").cyan());
     println!("{}", style("║                                                  ║").cyan());
     println!("{}", style(format!("║      3x-ui Offline Bundle Builder - V{: <9} ║", version)).cyan().bold());
-    println!("{}", style("║          ساخت بسته نصب آفلاین 3x-ui             ║").cyan());
+    println!("{}", style("║          Build 3x-ui Offline Bundle              ║").cyan());
     println!("{}", style("║                                                  ║").cyan());
     println!("{}", style("╚══════════════════════════════════════════════════╝").cyan());
     println!();
     println!(
         "  {}",
-        style("این ابزار یک بسته نصب کامل آفلاین برای پنل 3x-ui می‌سازد.").dim()
+        style("This tool builds a complete offline installation bundle for the 3x-ui panel.").dim()
     );
     println!();
 }
 
 fn print_done(out_dir: &str) {
     println!("\n{}", style("━".repeat(54)).green());
-    println!("{}", style("  ✅  Bundle آفلاین با موفقیت ساخته شد!").green().bold());
+    println!("{}", style("  ✅  Offline Bundle built successfully!").green().bold());
     println!("{}", style("━".repeat(54)).green());
     println!();
     println!(
         "  {}  {}",
-        style("📁 مسیر خروجی:").bold(),
+        style("📁 Output Directory:").bold(),
         style(out_dir).yellow().bold()
     );
     println!(
         "  {}",
-        style("برای نصب، پوشه را به سرور هدف منتقل کرده و اجرا کنید:").dim()
+        style("To install, transfer the folder to the target server and run:").dim()
     );
     println!(
         "    {}",

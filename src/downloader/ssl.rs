@@ -12,7 +12,7 @@ pub fn copy_custom(fullchain_src: &str, privkey_src: &str, out_dir: &str) -> Res
     fs::copy(privkey_src, format!("{}/privkey.pem", ssl_dir))?;
 
     println!(
-        "  {} فایل‌های SSL کپی شدند → {}",
+        "  {} SSL files copied → {}",
         style("✓").green(),
         style(&ssl_dir).yellow()
     );
@@ -22,7 +22,7 @@ pub fn copy_custom(fullchain_src: &str, privkey_src: &str, out_dir: &str) -> Res
 /// Generate a self-signed certificate for the given IP or domain.
 pub fn generate_self_signed(common_name: &str, out_dir: &str) -> Result<()> {
     println!(
-        "  {} در حال ساخت گواهی self-signed برای {}...",
+        "  {} Generating self-signed certificate for {}...",
         style("→").cyan(),
         style(common_name).yellow()
     );
@@ -34,7 +34,7 @@ pub fn generate_self_signed(common_name: &str, out_dir: &str) -> Result<()> {
     let subject_alt_names = vec![common_name.to_string()];
 
     let CertifiedKey { cert, key_pair } = generate_simple_self_signed(subject_alt_names)
-        .map_err(|e| anyhow::anyhow!("ساخت گواهی self-signed ناموفق: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to generate self-signed certificate: {}", e))?;
 
     let cert_pem = cert.pem();
     let key_pem  = key_pair.serialize_pem();
@@ -52,19 +52,19 @@ pub fn generate_self_signed(common_name: &str, out_dir: &str) -> Result<()> {
     }
 
     println!(
-        "  {} گواهی self-signed ساخته شد → {}/ssl/",
+        "  {} Self-signed certificate generated → {}/ssl/",
         style("✓").green(),
         out_dir
     );
     println!();
     println!("  {}", style("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━").yellow());
-    println!("  {} {}", style("ℹ️  راهنمای Self-Signed Certificate:").bold(), "");
+    println!("  {} {}", style("ℹ️  Self-Signed Certificate Guide:").bold(), "");
     println!("  {}", style("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━").yellow());
-    println!("  • این گواهی برای استفاده شخصی مناسب است.");
-    println!("  • مرورگرها هنگام باز کردن پنل هشدار امنیتی نشان می‌دهند.");
-    println!("  • برای رد کردن هشدار در Chrome: روی صفحه کلیک کنید و");
-    println!("    تایپ کنید: {}", style("thisisunsafe").bold().cyan());
-    println!("  • در Firefox: Advanced → Accept Risk and Continue");
+    println!("  • This certificate is suitable for personal use.");
+    println!("  • Browsers will show a security warning when opening the panel.");
+    println!("  • To bypass the warning in Chrome: click anywhere on the page and");
+    println!("    type: {}", style("thisisunsafe").bold().cyan());
+    println!("  • In Firefox: Advanced → Accept Risk and Continue");
     println!("  {}", style("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━").yellow());
     println!();
 

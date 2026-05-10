@@ -26,26 +26,26 @@ pub enum ProxyKind {
 pub fn ask_proxy() -> Result<Option<ProxyConfig>> {
     let theme = ColorfulTheme::default();
 
-    println!("{}", style("┌─ تنظیمات پروکسی (اختیاری) ───────────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Proxy Settings (Optional) ─────────────────────────────┐").bold().blue());
     println!();
     println!(
         "  {}",
-        style("اگر این سیستم برای دانلود به پروکسی نیاز دارد، اینجا تنظیم کنید.").dim()
+        style("If this system requires a proxy for downloading, configure it here.").dim()
     );
     println!(
         "  {}",
-        style("راهنما: SOCKS5 برای کلاینت‌های VPN مثل Clash/V2Ray / HTTP برای Squid و مشابه.").dim()
+        style("Guide: SOCKS5 for VPN clients like Clash/V2Ray / HTTP for Squid and similar.").dim()
     );
     println!();
 
     let needs_proxy = Confirm::with_theme(&theme)
-        .with_prompt("آیا برای دانلود به پروکسی نیاز دارید؟")
+        .with_prompt("Do you need a proxy for downloading?")
         .default(false)
         .interact()?;
 
     if !needs_proxy {
         println!(
-            "  {} بدون پروکسی — اتصال مستقیم",
+            "  {} No proxy — direct connection",
             style("→").dim()
         );
         println!();
@@ -53,11 +53,11 @@ pub fn ask_proxy() -> Result<Option<ProxyConfig>> {
     }
 
     let kind_items = vec![
-        "SOCKS5  (مثال: socks5://127.0.0.1:1080)",
-        "HTTP    (مثال: http://127.0.0.1:8080)",
+        "SOCKS5  (Example: socks5://127.0.0.1:1080)",
+        "HTTP    (Example: http://127.0.0.1:8080)",
     ];
     let kind_sel = Select::with_theme(&theme)
-        .with_prompt("نوع پروکسی")
+        .with_prompt("Proxy Type")
         .items(&kind_items)
         .default(0)
         .interact()?;
@@ -71,7 +71,7 @@ pub fn ask_proxy() -> Result<Option<ProxyConfig>> {
 
     let url: String = loop {
         let raw: String = Input::with_theme(&theme)
-            .with_prompt("آدرس پروکسی")
+            .with_prompt("Proxy Address")
             .default(default_url.to_string())
             .interact_text()?;
         let raw = raw.trim().to_string();
@@ -83,7 +83,7 @@ pub fn ask_proxy() -> Result<Option<ProxyConfig>> {
             break raw;
         }
         println!(
-            "  {} آدرس نامعتبر است. باید با socks5:// یا http:// شروع شود.",
+            "  {} Invalid address. Must start with socks5:// or http://",
             style("✗").red()
         );
     };
@@ -93,43 +93,43 @@ pub fn ask_proxy() -> Result<Option<ProxyConfig>> {
     // Test the connection
     println!();
     println!(
-        "  {} در حال تست اتصال از طریق پروکسی...",
+        "  {} Testing connection through proxy...",
         style("🔗").cyan()
     );
 
     match test_proxy(&cfg).await_or_run() {
         Ok(ms) => {
             println!(
-                "  {} اتصال موفق! تأخیر: {}ms",
+                "  {} Connection successful! Latency: {}ms",
                 style("✓").green().bold(),
                 style(ms).yellow()
             );
         }
         Err(e) => {
-            println!("  {} پروکسی پاسخ نداد: {}", style("✗").red(), e);
+            println!("  {} Proxy did not respond: {}", style("✗").red(), e);
             println!();
 
             let choice_items = vec![
-                "تلاش مجدد با همان پروکسی",
-                "وارد کردن آدرس جدید",
-                "ادامه بدون تأیید پروکسی (ممکن است دانلود شکست بخورد)",
-                "ادامه بدون پروکسی",
+                "Retry with the same proxy",
+                "Enter a new address",
+                "Continue without verification (download might fail)",
+                "Continue without proxy",
             ];
             let choice = Select::with_theme(&theme)
-                .with_prompt("چه کاری انجام شود؟")
+                .with_prompt("What would you like to do?")
                 .items(&choice_items)
                 .default(0)
                 .interact()?;
 
             match choice {
                 3 => {
-                    println!("  {} بدون پروکسی ادامه می‌دهیم.", style("→").dim());
+                    println!("  {} Continuing without proxy.", style("→").dim());
                     println!();
                     return Ok(None);
                 }
                 2 => {
                     println!(
-                        "  {} ادامه با پروکسی بدون تأیید.",
+                        "  {} Continuing with proxy without verification.",
                         style("⚠️").yellow()
                     );
                 }
@@ -197,7 +197,7 @@ fn build_client_inner(proxy_url: &str, timeout: Duration) -> Result<reqwest::Cli
 
     if !proxy_url.is_empty() {
         let proxy = reqwest::Proxy::all(proxy_url)
-            .map_err(|e| anyhow::anyhow!("پروکسی نامعتبر: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Invalid proxy: {}", e))?;
         builder = builder.proxy(proxy);
     }
 

@@ -37,7 +37,7 @@ pub async fn download(
     let tag = match &config.xui_version {
         XuiVersion::Latest => {
             println!(
-                "  {} دریافت آخرین نسخه x-ui از GitHub...",
+                "  {} Fetching latest x-ui version from GitHub...",
                 style("→").cyan()
             );
             fetch_latest_tag(&client).await?
@@ -45,7 +45,7 @@ pub async fn download(
         XuiVersion::Specific(t) => t.clone(),
     };
     println!(
-        "  {} نسخه: {}",
+        "  {} Version: {}",
         style("✓").green(),
         style(&tag).yellow().bold()
     );
@@ -56,43 +56,43 @@ pub async fn download(
     let tar_dest    = format!("{}/{}", out_dir, tar_name);
 
     if manifest.step_is_valid(out_dir, STEP_XUI_BINARY) {
-        println!("  {} x-ui binary — از قبل موجود است، رد می‌شود.", style("⏭️").dim());
+        println!("  {} x-ui binary — Already exists, skipping.", style("⏭️").dim());
     } else {
         let tar_url = format!("{}/{}/{}", GITHUB_RELEASE_BASE, tag, tar_name);
         download_with_progress(&client, &tar_url, &tar_dest, &format!("x-ui {} ({})", tag, arch_suffix))
             .await
-            .context("دانلود باینری x-ui ناموفق بود")?;
+            .context("Failed to download x-ui binary")?;
         manifest
             .mark_done(out_dir, STEP_XUI_BINARY, vec![tar_name.clone()])
-            .context("ذخیره manifest ناموفق بود")?;
+            .context("Failed to save manifest")?;
     }
 
     // ── Download x-ui.sh (CLI manager) ───────────────────────────────────────
     let xui_sh_dest = format!("{}/x-ui.sh", out_dir);
 
     if manifest.step_is_valid(out_dir, STEP_XUI_SH) {
-        println!("  {} x-ui.sh — از قبل موجود است، رد می‌شود.", style("⏭️").dim());
+        println!("  {} x-ui.sh — Already exists, skipping.", style("⏭️").dim());
     } else {
         download_with_progress(&client, XUI_SH_URL, &xui_sh_dest, "x-ui.sh (CLI manager)")
             .await
-            .context("دانلود x-ui.sh ناموفق بود")?;
+            .context("Failed to download x-ui.sh")?;
         manifest
             .mark_done(out_dir, STEP_XUI_SH, vec!["x-ui.sh".to_string()])
-            .context("ذخیره manifest ناموفق بود")?;
+            .context("Failed to save manifest")?;
     }
 
     // ── Download service file ─────────────────────────────────────────────────
     if manifest.step_is_valid(out_dir, STEP_SERVICE_FILE) {
-        println!("  {} service file — از قبل موجود است، رد می‌شود.", style("⏭️").dim());
+        println!("  {} service file — Already exists, skipping.", style("⏭️").dim());
     } else {
         let (service_url, service_filename) = resolve_service_url(&config.os);
         let service_dest = format!("{}/{}", out_dir, service_filename);
         download_with_progress(&client, service_url, &service_dest, &service_filename)
             .await
-            .context("دانلود فایل service ناموفق بود")?;
+            .context("Failed to download service file")?;
         manifest
             .mark_done(out_dir, STEP_SERVICE_FILE, vec![service_filename])
-            .context("ذخیره manifest ناموفق بود")?;
+            .context("Failed to save manifest")?;
     }
 
     Ok(())
@@ -110,7 +110,7 @@ async fn fetch_latest_tag(client: &reqwest::Client) -> Result<String> {
     resp["tag_name"]
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| anyhow::anyhow!("GitHub API پاسخ معتبری برنگرداند"))
+        .ok_or_else(|| anyhow::anyhow!("GitHub API returned an invalid response"))
 }
 
 /// Returns (url, filename) for the appropriate service file.

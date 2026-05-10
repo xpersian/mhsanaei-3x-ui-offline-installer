@@ -38,27 +38,27 @@ pub fn run_resume_mode(dir: &str, manifest: Manifest) -> Result<ResumeAction> {
 
     // ── Header ───────────────────────────────────────────────────────────────
     println!("{}", style("━".repeat(54)).yellow());
-    println!("{}", style("  📦  Bundle موجود پیدا شد!").yellow().bold());
+    println!("{}", style("  📦  Existing bundle found!").yellow().bold());
     println!("{}", style("━".repeat(54)).yellow());
 
     if let Some(cfg) = manifest.config.as_object() {
         let get = |k: &str| cfg.get(k).and_then(|v| v.as_str()).unwrap_or("?");
-        println!("  {:20} {}", style("سیستم‌عامل:").dim(),  style(get("os")).cyan());
-        println!("  {:20} {}", style("معماری:").dim(),      style(get("arch")).cyan());
-        println!("  {:20} {}", style("نسخه x-ui:").dim(),  style(get("xui_version")).cyan());
-        println!("  {:20} {}", style("پورت پنل:").dim(),   style(get("panel_port")).yellow());
-        println!("  {:20} {}", style("نام کاربری:").dim(), style(get("panel_username")).yellow());
-        println!("  {:20} {}", style("SSL:").dim(),         style(get("ssl_kind")).cyan());
+        println!("  {:20} {}", style("OS:").dim(),            style(get("os")).cyan());
+        println!("  {:20} {}", style("Architecture:").dim(),  style(get("arch")).cyan());
+        println!("  {:20} {}", style("x-ui Version:").dim(),  style(get("xui_version")).cyan());
+        println!("  {:20} {}", style("Panel Port:").dim(),   style(get("panel_port")).yellow());
+        println!("  {:20} {}", style("Username:").dim(),     style(get("panel_username")).yellow());
+        println!("  {:20} {}", style("SSL:").dim(),          style(get("ssl_kind")).cyan());
         println!(
             "  {:20} {}",
-            style("تاریخ ساخت:").dim(),
+            style("Created At:").dim(),
             style(manifest.created_at.format("%Y-%m-%d %H:%M UTC").to_string()).dim()
         );
     }
     println!();
 
     // ── Verify ───────────────────────────────────────────────────────────────
-    println!("{}", style("  🔍  تأیید صحت bundle...").bold());
+    println!("{}", style("  🔍  Verifying bundle integrity...").bold());
     println!("{}", style("  ─────────────────────────────────────────").dim());
 
     let (all_ok, any_missing) = show_verify_report(dir, &manifest);
@@ -67,10 +67,10 @@ pub fn run_resume_mode(dir: &str, manifest: Manifest) -> Result<ResumeAction> {
     println!();
 
     if all_ok {
-        println!("  {} همه فایل‌ها سالم هستند.", style("✅").green());
+        println!("  {} All files are healthy.", style("✅").green());
     } else {
         println!(
-            "  {} برخی فایل‌ها ناموجود یا خراب هستند.",
+            "  {} Some files are missing or corrupted.",
             style("⚠️").yellow()
         );
     }
@@ -79,14 +79,14 @@ pub fn run_resume_mode(dir: &str, manifest: Manifest) -> Result<ResumeAction> {
     // ── Resume menu ───────────────────────────────────────────────────────────
     let mut menu_items: Vec<&str> = Vec::new();
     if any_missing {
-        menu_items.push("ادامه دانلود — تکمیل موارد ناقص/گمشده");
+        menu_items.push("Continue download — complete missing/incomplete items");
     }
-    menu_items.push("ویرایش تنظیمات — پورت / نام کاربری / رمز عبور / SSL");
-    menu_items.push("شروع مجدد کامل — حذف bundle و شروع از ابتدا");
-    menu_items.push("خروج");
+    menu_items.push("Edit settings — Port / Username / Password / SSL");
+    menu_items.push("Full restart — delete bundle and start from scratch");
+    menu_items.push("Exit");
 
     let sel = Select::with_theme(&theme)
-        .with_prompt("چه کاری انجام شود؟")
+        .with_prompt("What would you like to do?")
         .items(&menu_items)
         .default(0)
         .interact()?;
@@ -109,7 +109,7 @@ pub fn run_resume_mode(dir: &str, manifest: Manifest) -> Result<ResumeAction> {
             println!();
             let ok = Confirm::with_theme(&theme)
                 .with_prompt(&format!(
-                    "آیا مطمئنید؟ پوشه {} کاملاً حذف خواهد شد.",
+                    "Are you sure? The folder {} will be completely deleted.",
                     style(dir).yellow()
                 ))
                 .default(false)
@@ -117,7 +117,7 @@ pub fn run_resume_mode(dir: &str, manifest: Manifest) -> Result<ResumeAction> {
 
             if ok {
                 fs::remove_dir_all(dir)?;
-                println!("  {} bundle قبلی حذف شد.", style("✓").green());
+                println!("  {} Previous bundle deleted.", style("✓").green());
                 Ok(ResumeAction::Restart)
             } else {
                 Ok(ResumeAction::Exit)
@@ -133,8 +133,8 @@ pub fn show_verify_report(dir: &str, manifest: &Manifest) -> (bool, bool) {
     let steps = [
         (STEP_XUI_BINARY,   "x-ui binary (.tar.gz) "),
         (STEP_XUI_SH,       "x-ui.sh (CLI manager) "),
-        (STEP_SERVICE_FILE, "فایل service/rc       "),
-        (STEP_PACKAGES,     "پکیج‌های آفلاین        "),
+        (STEP_SERVICE_FILE, "Service/RC file        "),
+        (STEP_PACKAGES,     "Offline packages       "),
         (STEP_SSL,          "SSL (cert/key)         "),
         (STEP_INSTALL_SH,   "install.sh             "),
     ];
@@ -148,12 +148,12 @@ pub fn show_verify_report(dir: &str, manifest: &Manifest) -> (bool, bool) {
         // Detect "skipped" steps (Done with no files = online mode / no-ssl)
         if let Some(s) = step {
             if s.status == StepStatus::Done && s.files.is_empty() {
-                let reason = if *key == STEP_PACKAGES { "حالت آنلاین" } else { "بدون SSL" };
+                let reason = if *key == STEP_PACKAGES { "Online Mode" } else { "No SSL" };
                 println!(
                     "  {} {}  {}",
                     style("⏭️").dim(),
                     style(label).dim(),
-                    style(format!("رد شد ({})", reason)).dim()
+                    style(format!("Skipped ({})", reason)).dim()
                 );
                 continue;
             }
@@ -175,7 +175,7 @@ pub fn show_verify_report(dir: &str, manifest: &Manifest) -> (bool, bool) {
                     "  {} {}  {}",
                     style("❌").red(),
                     style(label).bold(),
-                    style("فایل ناموجود یا خراب").red()
+                    style("File missing or corrupted").red()
                 );
                 all_ok      = false;
                 any_missing = true;
@@ -186,18 +186,18 @@ pub fn show_verify_report(dir: &str, manifest: &Manifest) -> (bool, bool) {
                     "  {} {}  {}",
                     style("⚠️ ").yellow(),
                     style(label).bold(),
-                    style(format!("ناقص — {}", note)).yellow()
+                    style(format!("Incomplete — {}", note)).yellow()
                 );
                 all_ok      = false;
                 any_missing = true;
             }
             Some(StepStatus::Failed) => {
-                let note = step.and_then(|s| s.note.as_deref()).unwrap_or("ناشناخته");
+                let note = step.and_then(|s| s.note.as_deref()).unwrap_or("Unknown");
                 println!(
                     "  {} {}  {}",
                     style("❌").red(),
                     style(label).bold(),
-                    style(format!("ناموفق — {}", note)).red()
+                    style(format!("Failed — {}", note)).red()
                 );
                 all_ok      = false;
                 any_missing = true;
@@ -207,7 +207,7 @@ pub fn show_verify_report(dir: &str, manifest: &Manifest) -> (bool, bool) {
                     "  {} {}  {}",
                     style("🔲").dim(),
                     style(label).dim(),
-                    style("انجام نشده").dim()
+                    style("Not done").dim()
                 );
                 any_missing = true;
             }
@@ -222,25 +222,25 @@ pub fn show_verify_report(dir: &str, manifest: &Manifest) -> (bool, bool) {
 fn edit_settings(dir: &str, mut manifest: Manifest) -> Result<(Manifest, bool)> {
     let theme = ColorfulTheme::default();
 
-    println!("{}", style("┌─ ویرایش تنظیمات ──────────────────────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Edit Settings ──────────────────────────────────────────┐").bold().blue());
     println!();
-    println!("  {}", style("نکته: تغییر پورت/کاربری/رمز/SSL فقط install.sh را بازسازی می‌کند.").dim());
+    println!("  {}", style("Note: Changing Port/User/Pass/SSL only regenerates install.sh.").dim());
     println!();
 
     let mut needs_redownload = false;
 
     loop {
         let edit_items = vec![
-            "تغییر پورت پنل",
-            "تغییر نام کاربری",
-            "تغییر رمز عبور",
-            "تغییر SSL",
-            "بازسازی install.sh و ذخیره",
-            "بازگشت",
+            "Change Panel Port",
+            "Change Username",
+            "Change Password",
+            "Change SSL",
+            "Regenerate install.sh and Save",
+            "Back",
         ];
 
         let sel = Select::with_theme(&theme)
-            .with_prompt("چه تنظیماتی؟")
+            .with_prompt("Which setting?")
             .items(&edit_items)
             .default(4)
             .interact()?;
@@ -248,39 +248,39 @@ fn edit_settings(dir: &str, mut manifest: Manifest) -> Result<(Manifest, bool)> 
         match sel {
             0 => {
                 let p: String = Input::with_theme(&theme)
-                    .with_prompt("پورت جدید (1024-65535)")
+                    .with_prompt("New Port (1024-65535)")
                     .interact_text()?;
                 if let Ok(n) = p.trim().parse::<u16>() {
                     if n >= 1024 {
                         if let Some(obj) = manifest.config.as_object_mut() {
                             obj.insert("panel_port".to_string(), serde_json::json!(n));
                         }
-                        println!("  {} پورت → {}", style("✓").green(), n);
+                        println!("  {} Port → {}", style("✓").green(), n);
                     }
                 }
             }
             1 => {
                 let u: String = Input::with_theme(&theme)
-                    .with_prompt("نام کاربری جدید")
+                    .with_prompt("New Username")
                     .interact_text()?;
                 if let Some(obj) = manifest.config.as_object_mut() {
                     obj.insert("panel_username".to_string(), serde_json::json!(u.trim()));
                 }
-                println!("  {} نام کاربری به‌روز شد.", style("✓").green());
+                println!("  {} Username updated.", style("✓").green());
             }
             2 => {
                 let p: String = Input::with_theme(&theme)
-                    .with_prompt("رمز عبور جدید")
+                    .with_prompt("New Password")
                     .interact_text()?;
                 if let Some(obj) = manifest.config.as_object_mut() {
                     obj.insert("panel_password".to_string(), serde_json::json!(p.trim()));
                 }
-                println!("  {} رمز عبور به‌روز شد.", style("✓").green());
+                println!("  {} Password updated.", style("✓").green());
             }
             3 => {
-                let ssl_items = vec!["بدون SSL", "Self-Signed", "Custom (فایل‌های موجود)"];
+                let ssl_items = vec!["No SSL", "Self-Signed", "Custom (Existing files)"];
                 let ss = Select::with_theme(&theme)
-                    .with_prompt("نوع SSL جدید")
+                    .with_prompt("New SSL Type")
                     .items(&ssl_items)
                     .default(0)
                     .interact()?;
@@ -289,19 +289,19 @@ fn edit_settings(dir: &str, mut manifest: Manifest) -> Result<(Manifest, bool)> 
                     0 => "none".to_string(),
                     1 => {
                         let cn: String = Input::with_theme(&theme)
-                            .with_prompt("IP یا دامنه برای Self-Signed")
+                            .with_prompt("IP or Domain for Self-Signed")
                             .interact_text()?;
                         needs_redownload = true;
                         format!("self-signed({})", cn.trim())
                     }
                     _ => {
-                        let cert: String = Input::with_theme(&theme).with_prompt("مسیر fullchain.pem").interact_text()?;
-                        let key:  String = Input::with_theme(&theme).with_prompt("مسیر privkey.pem").interact_text()?;
+                        let cert: String = Input::with_theme(&theme).with_prompt("Path to fullchain.pem").interact_text()?;
+                        let key:  String = Input::with_theme(&theme).with_prompt("Path to privkey.pem").interact_text()?;
                         let ssl_dir = format!("{}/ssl", dir);
                         fs::create_dir_all(&ssl_dir)?;
                         fs::copy(cert.trim(), format!("{}/fullchain.pem", ssl_dir))?;
                         fs::copy(key.trim(),  format!("{}/privkey.pem",   ssl_dir))?;
-                        println!("  {} فایل‌های SSL کپی شدند.", style("✓").green());
+                        println!("  {} SSL files copied.", style("✓").green());
                         "custom".to_string()
                     }
                 };
@@ -313,7 +313,7 @@ fn edit_settings(dir: &str, mut manifest: Manifest) -> Result<(Manifest, bool)> 
                     s.files.clear();
                     s.sha256.clear();
                 }
-                println!("  {} SSL به‌روز شد.", style("✓").green());
+                println!("  {} SSL updated.", style("✓").green());
             }
             4 => {
                 // Regenerate install.sh
@@ -326,10 +326,10 @@ fn edit_settings(dir: &str, mut manifest: Manifest) -> Result<(Manifest, bool)> 
                             s.files  = vec!["install.sh".to_string()];
                         }
                         manifest.save(dir)?;
-                        println!("  {} install.sh بازسازی شد.", style("✓").green());
+                        println!("  {} install.sh regenerated.", style("✓").green());
                     }
                     Err(e) => {
-                        println!("  {} خطا در بازسازی: {}", style("✗").red(), e);
+                        println!("  {} Error during regeneration: {}", style("✗").red(), e);
                     }
                 }
                 break;
@@ -349,7 +349,7 @@ pub fn config_from_manifest(manifest: &Manifest, dir: &str) -> Result<BuildConfi
     use crate::wizard::state::*;
 
     let cfg = manifest.config.as_object()
-        .ok_or_else(|| anyhow::anyhow!("manifest.config ساختار نامعتبری دارد"))?;
+        .ok_or_else(|| anyhow::anyhow!("manifest.config has an invalid structure"))?;
 
     let get_str = |k: &str| -> String {
         cfg.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string()

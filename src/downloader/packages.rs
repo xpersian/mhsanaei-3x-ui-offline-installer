@@ -18,7 +18,7 @@ pub async fn download(
     // If already done and valid, skip
     if manifest.step_is_valid(out_dir, STEP_PACKAGES) {
         println!(
-            "  {} packages — از قبل موجودند، رد می‌شود.",
+            "  {} packages — Already exist, skipping.",
             style("⏭️").dim()
         );
         return Ok(());
@@ -26,7 +26,7 @@ pub async fn download(
 
     let Some(mirror) = os_detect::mirror_info(&config.os) else {
         println!(
-            "  {} دانلود آفلاین پکیج برای {} پشتیبانی نمی‌شود.",
+            "  {} Offline package download is not supported for {}.",
             style("⚠️").yellow(),
             config.os.display_name()
         );
@@ -39,7 +39,7 @@ pub async fn download(
     let client   = proxy::build_client(&config.proxy)?;
 
     println!(
-        "  {} {} پکیج برای {} دانلود می‌شود...",
+        "  {} Downloading {} packages for {}...",
         style("→").cyan(),
         packages.len(),
         config.os.display_name()
@@ -60,13 +60,13 @@ pub async fn download(
             }
             Ok(None) => {
                 println!(
-                    "  {} {} رد شد (آنلاین نصب خواهد شد)",
+                    "  {} {} skipped (will be installed online)",
                     style("⚠️").yellow(),
                     pkg
                 );
             }
             Err(e) => {
-                println!("  {} {} — خطا: {}", style("✗").red(), pkg, e);
+                println!("  {} {} — Error: {}", style("✗").red(), pkg, e);
             }
         }
     }
@@ -75,13 +75,14 @@ pub async fn download(
     if downloaded_files.len() == packages.len() {
         manifest.mark_done(out_dir, STEP_PACKAGES, downloaded_files)?;
     } else if !downloaded_files.is_empty() {
+        let count = downloaded_files.len();
         manifest.mark_partial(
             out_dir,
             STEP_PACKAGES,
             downloaded_files,
             Some(format!(
-                "{}/{} پکیج دانلود شد",
-                packages.len() - 0,
+                "{}/{} packages downloaded",
+                count,
                 packages.len()
             )),
         )?;
@@ -90,7 +91,7 @@ pub async fn download(
     }
 
     println!(
-        "  {} پکیج‌ها دانلود شدند → {}",
+        "  {} Packages downloaded → {}",
         style("✓").green(),
         style(pkg_dir).yellow()
     );

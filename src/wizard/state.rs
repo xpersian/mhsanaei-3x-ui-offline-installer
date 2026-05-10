@@ -117,7 +117,7 @@ impl TargetArch {
 
     pub fn display_name(&self) -> &'static str {
         match self {
-            TargetArch::Amd64  => "amd64 (x86_64) — رایج‌ترین",
+            TargetArch::Amd64  => "amd64 (x86_64) — Most common",
             TargetArch::Arm64  => "arm64 (aarch64)",
             TargetArch::Armv7  => "armv7",
             TargetArch::I386   => "386 (x86 32-bit)",

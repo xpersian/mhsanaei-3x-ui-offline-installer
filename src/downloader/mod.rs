@@ -29,7 +29,7 @@ pub async fn download_all(config: &BuildConfig, manifest: &mut Manifest) -> Resu
 
     // 3. SSL files (with resume support)
     if manifest.step_is_valid(out, STEP_SSL) {
-        println!("  {} SSL — از قبل موجود است، رد می‌شود.", console::style("⏭️").dim());
+        println!("  {} SSL — Already exists, skipping.", console::style("⏭️").dim());
     } else {
         match &config.ssl {
             SslConfig::None => {

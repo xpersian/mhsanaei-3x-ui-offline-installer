@@ -11,7 +11,7 @@ pub async fn run() -> Result<BuildConfig> {
     let theme = ColorfulTheme::default();
 
     // ── Step 1: OS ───────────────────────────────────────────────────────────
-    println!("{}", style("┌─ مرحله ۱/۷ — اطلاعات سرور هدف ─────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 1/7 — Target Server Info ─────────────────────────┐").bold().blue());
     println!();
 
     let os_items = vec![
@@ -25,7 +25,7 @@ pub async fn run() -> Result<BuildConfig> {
         "OpenSUSE",
     ];
     let os_sel = Select::with_theme(&theme)
-        .with_prompt("سیستم‌عامل سرور هدف را انتخاب کنید")
+        .with_prompt("Select Target Server OS")
         .items(&os_items)
         .default(0)
         .interact()?;
@@ -43,7 +43,7 @@ pub async fn run() -> Result<BuildConfig> {
     };
 
     let os_version_str: String = Input::with_theme(&theme)
-        .with_prompt("نسخه سیستم‌عامل (اختیاری — مثلاً 22.04 یا 9)")
+        .with_prompt("OS Version (Optional — e.g., 22.04 or 9)")
         .allow_empty(true)
         .interact_text()?;
     let os_version = if os_version_str.trim().is_empty() { None } else { Some(os_version_str.trim().to_string()) };
@@ -57,7 +57,7 @@ pub async fn run() -> Result<BuildConfig> {
         TargetArch::S390x.display_name(),
     ];
     let arch_sel = Select::with_theme(&theme)
-        .with_prompt("معماری CPU سرور هدف")
+        .with_prompt("Target Server CPU Architecture")
         .items(&arch_items)
         .default(0)
         .interact()?;
@@ -74,22 +74,22 @@ pub async fn run() -> Result<BuildConfig> {
     println!();
 
     // ── Step 2: Package mode ─────────────────────────────────────────────────
-    println!("{}", style("┌─ مرحله ۲/۷ — نصب پکیج‌های سیستمی ──────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 2/7 — System Package Installation ────────────────┐").bold().blue());
     println!();
 
     let pkg_mode_items = vec![
-        "آنلاین — سرور هدف به اینترنت دسترسی دارد",
-        "آفلاین — دانلود پکیج‌ها الان و نصب بدون اینترنت",
+        "Online — Target server has internet access",
+        "Offline — Download packages now for air-gapped installation",
     ];
     let pkg_mode_sel = Select::with_theme(&theme)
-        .with_prompt("حالت نصب پکیج‌ها")
+        .with_prompt("Package Installation Mode")
         .items(&pkg_mode_items)
         .default(0)
         .interact()?;
 
     let package_mode = if pkg_mode_sel == 1 {
         if !os_detect::supports_offline_packages(&os) {
-            println!("\n  {} {}", style("⚠️").yellow(), style("این OS از آفلاین کامل پشتیبانی نمی‌کند. آنلاین استفاده می‌شود.").yellow());
+            println!("\n  {} {}", style("⚠️").yellow(), style("This OS does not support full offline packages. Online mode will be used.").yellow());
             PackageMode::Online
         } else {
             PackageMode::Offline
@@ -100,50 +100,50 @@ pub async fn run() -> Result<BuildConfig> {
     println!();
 
     // ── Step 3: Server IP/Host ───────────────────────────────────────────────
-    println!("{}", style("┌─ مرحله ۳/۷ — آدرس سرور هدف ──────────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 3/7 — Target Server Address ──────────────────────┐").bold().blue());
     println!();
     let server_host: String = Input::with_theme(&theme)
-        .with_prompt("IP یا دامنه سرور هدف (برای SSL و لینک دسترسی)")
+        .with_prompt("Target Server IP or Domain (for SSL and access link)")
         .interact_text()?;
     let server_host = server_host.trim().to_string();
     println!();
 
     // ── Step 4: x-ui version ─────────────────────────────────────────────────
-    println!("{}", style("┌─ مرحله ۴/۷ — نسخه x-ui ──────────────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 4/7 — x-ui Version ───────────────────────────────┐").bold().blue());
     println!();
-    let ver_items = vec!["آخرین نسخه (GitHub)", "نسخه خاص"];
+    let ver_items = vec!["Latest Version (GitHub)", "Specific Version"];
     let ver_sel = Select::with_theme(&theme).items(&ver_items).default(0).interact()?;
     let xui_version = if ver_sel == 0 { XuiVersion::Latest } else {
-        let v: String = Input::with_theme(&theme).with_prompt("نسخه (مثلاً v2.5.1)").interact_text()?;
+        let v: String = Input::with_theme(&theme).with_prompt("Version (e.g. v2.5.1)").interact_text()?;
         XuiVersion::Specific(if v.starts_with('v') { v } else { format!("v{}", v) })
     };
     println!();
 
     // ── Step 5: Panel settings ───────────────────────────────────────────────
-    println!("{}", style("┌─ مرحله ۵/۷ — تنظیمات پنل ────────────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 5/7 — Panel Settings ─────────────────────────────┐").bold().blue());
     println!();
     let panel_port = prompt::random_port();
     let panel_username = prompt::random_string(8);
     let panel_password = prompt::random_string(10);
     let panel_web_base_path = prompt::random_string(12);
 
-    println!("  {} پورت:      {}", style("→").green(), style(panel_port).yellow().bold());
-    println!("  {} نام کاربری: {}", style("→").green(), style(&panel_username).yellow().bold());
-    println!("  {} رمز عبور:  {}", style("→").green(), style(&panel_password).yellow().bold());
-    println!("  {} آدرس وب:   /{}", style("→").green(), style(&panel_web_base_path).yellow().bold());
-    println!("  {} آدرس دسترسی: http://{}:{}/{}", style("→").green(), style(&server_host).cyan(), style(panel_port).cyan(), style(&panel_web_base_path).cyan());
+    println!("  {} Port:          {}", style("→").green(), style(panel_port).yellow().bold());
+    println!("  {} Username:      {}", style("→").green(), style(&panel_username).yellow().bold());
+    println!("  {} Password:      {}", style("→").green(), style(&panel_password).yellow().bold());
+    println!("  {} Web Path:      /{}", style("→").green(), style(&panel_web_base_path).yellow().bold());
+    println!("  {} Access Link:   http://{}:{}/{}", style("→").green(), style(&server_host).cyan(), style(panel_port).cyan(), style(&panel_web_base_path).cyan());
     println!();
 
     // ── Step 6: SSL ──────────────────────────────────────────────────────────
-    println!("{}", style("┌─ مرحله ۶/۷ — تنظیمات SSL ────────────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 6/7 — SSL Settings ───────────────────────────────┐").bold().blue());
     println!();
-    let ssl_items = vec!["بدون SSL", "Custom SSL", "Self-Signed (پیشنهادی)"];
+    let ssl_items = vec!["No SSL", "Custom SSL", "Self-Signed (Recommended)"];
     let ssl_sel = Select::with_theme(&theme).items(&ssl_items).default(2).interact()?;
     let ssl = match ssl_sel {
         0 => SslConfig::None,
         1 => {
-            let cert: String = Input::with_theme(&theme).with_prompt("مسیر fullchain").interact_text()?;
-            let key:  String = Input::with_theme(&theme).with_prompt("مسیر privkey").interact_text()?;
+            let cert: String = Input::with_theme(&theme).with_prompt("Fullchain Path").interact_text()?;
+            let key:  String = Input::with_theme(&theme).with_prompt("Privkey Path").interact_text()?;
             SslConfig::Custom { fullchain_path: cert.trim().into(), privkey_path: key.trim().into() }
         }
         _ => SslConfig::SelfSigned { common_name: server_host.clone() },
@@ -151,21 +151,21 @@ pub async fn run() -> Result<BuildConfig> {
     println!();
 
     // ── Step 7: Output Kind ──────────────────────────────────────────────────
-    println!("{}", style("┌─ مرحله ۷/۷ — نوع فایل خروجی ─────────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 7/7 — Output File Type ───────────────────────────┐").bold().blue());
     println!();
     let out_items = vec![
-        "Self-Extracting (.sh) — یک فایل واحد، انتقال بسیار راحت (پیشنهادی)",
-        "پوشه معمولی — شامل تمام فایل‌ها به صورت جداگانه",
+        "Self-Extracting (.sh) — Single file, easiest to transfer (Recommended)",
+        "Normal Folder — Includes all files separately",
     ];
-    let out_sel = Select::with_theme(&theme).with_prompt("چگونه بسته را دریافت می‌کنید؟").items(&out_items).default(0).interact()?;
+    let out_sel = Select::with_theme(&theme).with_prompt("How would you like to receive the bundle?").items(&out_items).default(0).interact()?;
     let output_kind = if out_sel == 0 { OutputKind::Sfx } else { OutputKind::Folder };
 
-    let output_dir: String = Input::with_theme(&theme).with_prompt("مسیر ذخیره‌سازی").default("./xui-bundle".into()).interact_text()?;
+    let output_dir: String = Input::with_theme(&theme).with_prompt("Storage Path").default("./xui-bundle".into()).interact_text()?;
 
     // ── Final Confirm ────────────────────────────────────────────────────────
     println!("\n{}", style("━".repeat(50)).dim());
-    let ok = Confirm::with_theme(&theme).with_prompt("آیا از تنظیمات بالا مطمئن هستید؟").default(true).interact()?;
-    if !ok { anyhow::bail!("لغو شد."); }
+    let ok = Confirm::with_theme(&theme).with_prompt("Are you sure about the settings above?").default(true).interact()?;
+    if !ok { anyhow::bail!("Cancelled."); }
 
     Ok(BuildConfig {
         os, arch, os_version, package_mode, server_host, xui_version,

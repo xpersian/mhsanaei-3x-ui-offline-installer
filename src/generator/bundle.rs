@@ -11,7 +11,7 @@ use tar::Builder;
 /// It bundles everything in the bundle_dir into a binary payload at the end of a bash script.
 pub fn create_sfx(bundle_dir: &str, output_path: &str) -> Result<()> {
     println!(
-        "  {} در حال ساخت فایل SFX تک‌فایله...",
+        "  {} Building single-file SFX installer...",
         style("📦").cyan()
     );
 
@@ -49,14 +49,14 @@ if [ -z "$PAYLOAD_LINE" ]; then
     exit 1
 fi
 
-echo "📦 در حال استخراج محتوا..."
+echo "📦 Extracting content..."
 mkdir -p "$INSTALL_DIR"
 
 # Extract binary payload
 tail -n +$PAYLOAD_LINE "$0" | tar -xz -C "$INSTALL_DIR"
 
 # Run the inner installer
-echo "🚀 شروع فرآیند نصب..."
+echo "🚀 Starting installation process..."
 cd "$INSTALL_DIR"
 if [ -f "./install.sh" ]; then
     bash ./install.sh
@@ -85,7 +85,7 @@ __BINARY_DATA_BELOW__
 
     let size_mb = tar_gz_buffer.len() as f64 / 1024.0 / 1024.0;
     println!(
-        "  {} فایل SFX ساخته شد: {} ({:.2} MB)",
+        "  {} SFX file created: {} ({:.2} MB)",
         style("✓").green(),
         style(output_path).yellow().bold(),
         size_mb
