@@ -10,9 +10,6 @@ jobs:
   release:
     name: Build & Release
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        working-directory: xui-offline-builder
     strategy:
       matrix:
         include:
