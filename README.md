@@ -1,65 +1,84 @@
-# 🚀 3x-ui Offline Installer Builder (Rust)
+# 3x-ui Offline Installer Builder
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)]()
+[![Rust](https://img.shields.io/badge/Language-Rust-orange.svg)](https://www.rust-lang.org/)
 
-A powerful, interactive Rust-based tool designed to build **fully self-contained, offline installation bundles** for the 3x-ui panel. It packages all binaries, system dependencies, and configurations into a single executable shell script, making deployments on network-restricted (air-gapped) servers effortless.
+**3x-ui Offline Installer Builder** is a high-performance, resilient tool designed to build fully self-contained installation bundles for the 3x-ui panel, specifically for air-gapped and restricted network environments.
 
----
-
-## ✨ Key Features
-
-- **📦 Single-File SFX:** Generates a single `.sh` file that contains the entire installation bundle (using Binary Append). No need to transfer multiple folders.
-- **🌐 True Offline Mode:** Automatically downloads required system packages (`.deb`, `.rpm`, `.apk`) from official mirrors for 8 different Linux distributions.
-- **⚡ Intelligent Resume & Verify:** Automatically detects existing bundles. It verifies file integrity using **SHA256** and allows you to resume failed downloads or edit settings (Port/SSL) without re-downloading heavy assets.
-- **🔒 Advanced SSL Management:** Automatically generates Self-Signed certificates based on the target server's IP/Domain or allows the use of custom certificates.
-- **🛠️ Fully Configurable:** Customize Port, Username, Password, and WebBasePath during the build phase.
-- **🔌 Proxy Support:** Built-in SOCKS5 and HTTP proxy support for environments with restricted internet access during the bundling phase.
-- **🖥️ Multi-Platform Builder:** Pre-built binaries available for **Linux, Windows, and macOS**.
+🇮🇷 [Read in Persian (فارسی)](README_FA.md) 🇮🇷
 
 ---
 
-## 🚀 How to Use
+## 🚀 Introduction
+This tool eliminates the need for internet access on target servers by pre-packaging everything—from system dependencies (.deb, .rpm, .apk) to the panel binaries and SSL certificates—into a single, executable shell script. 
 
-### 1. Get the Tool
-You can either download the pre-built binary from the [Releases](https://github.com/MHSanaei/3x-ui-offline-installer/releases) page or build it from source:
+### Key Hardening Features:
+- **🧠 Smart Update Engine:** Detects existing installations and offers safe updates (preserving DB/users) or clean reinstalls.
+- **🌐 Multi-Repo Discovery:** Intelligent scraping of multiple streams (BaseOS/AppStream) for RHEL-based resilience.
+- **🔄 Network Persistence:** 3-tier retry mechanism for reliable bundling even on unstable connections.
+- **🔒 Integrated SSL:** Automated self-signed certificate generation or custom certificate bundling.
+
+---
+
+## ⚡ Quick Start
+
+### 1. Download
+Get the latest pre-built binary for your operating system from the [Releases Page](https://github.com/Fox-Fig/mhsanaei-3x-ui-offline-installer/releases).
+
+### 2. Run the Builder
+Execute the builder on a machine with internet access.
+
+**Linux / macOS:**
 ```bash
-cargo build --release
+chmod +x xui-offline-builder
+./xui-offline-builder
 ```
 
-### 2. Generate a Bundle
-Run the builder and follow the interactive wizard:
-```bash
-./target/release/xui-offline-builder
+**Windows:**
+Double-click `xui-offline-builder-windows.exe` or run via PowerShell:
+```powershell
+.\xui-offline-builder-windows.exe
 ```
-At the end of the process, you will have a single installer file (e.g., `xui-bundle.sh`).
 
-### 3. Deploy to Target Server
-Transfer the generated file to your destination server and run it:
+### 3. Deploy to Server
+Transfer the generated bundle to your target server. The output will be a single `.sh` file (the name depends on the bundle name you chose during the wizard).
 ```bash
-# Transfer to server
-scp xui-bundle.sh root@YOUR_SERVER_IP:/root/
-
-# Run the installer (No internet required on the server)
-bash xui-bundle.sh
+# Run on the target server (No internet required)
+bash YOUR_BUNDLE_NAME.sh
 ```
 
 ---
 
-## 📋 Supported Distributions
-- **Debian / Ubuntu** (Full Offline Support)
-- **CentOS / RHEL / Rocky / AlmaLinux** (Full Offline Support)
-- **Alpine Linux** (Full Offline Support)
-- **Arch / OpenSUSE** (Online package installation)
+## 📋 Compatibility Matrix
+
+| Distribution | Support | Mode |
+| :--- | :--- | :--- |
+| **Ubuntu / Debian** | Full (.deb) | 🟢 100% Offline |
+| **Rocky / Alma / CentOS** | Base + AppStream | 🟢 100% Offline |
+| **Fedora (v39-v44)** | Full (.rpm) | 🟢 100% Offline |
+| **Alpine Linux** | Full (.apk) | 🟢 100% Offline |
+| **Arch / Manjaro** | Rolling | 🟡 Hybrid |
 
 ---
 
-## 🛠️ CI/CD & Versioning
-This project uses GitHub Actions for automated multi-platform builds.
-- **Versioning:** Follows `Vx.x.x` format based on Git tags and `Cargo.toml`.
-- **Automatic Releases:** Every tag push or manual trigger creates a new release with binaries for Linux, Windows, and macOS, including an automated changelog from the latest commit.
+## ❤️ Support & Donate
+If you find this project useful, please consider donating to support development and server costs.
+
+| Currency | Address |
+| :--- | :--- |
+| **Ethereum (ETH)** | `0xb59993FeCace98BF6b89a216f5ca1776028A7047` |
+| **Bitcoin (BTC)** | `bc1qx28s2sz3nvhelclpgan24ymflssql8uzcmexn3` |
+| **Ripple (XRP)** | `rHoTVZWrPhYWf4uHkHZFicrJsADp57Yq4g` |
+| **USDT / TRX (TRC20)** | `TXKnT3drzW4kb7imKrr1DVfwZWkrQWWpJo` |
+| **Toncoin (TON)** | `UQBfP7DC-SJZT7aITPIGacrm09H6b_thlSOzc_5zesnBYMBI` |
 
 ---
 
-## 🛡️ Security
-The builder generates random credentials and secure paths by default. It also provides a clear **Access URL** at the end of the installation to ensure you can access your panel immediately.
+## 📄 License
+This project is licensed under the [GPLv3 License](LICENSE).
 
 ---
-**Developed with ❤️ for the Open Source community.**
+
+<div align="center">
+  Made with ❤️ by <a href="https://t.me/FoxFig">FoxFig Team</a><br>
+  Dedicated to all people of Iran 🇮🇷
+</div>
