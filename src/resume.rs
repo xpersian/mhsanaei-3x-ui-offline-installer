@@ -320,7 +320,10 @@ fn edit_settings(dir: &str, mut manifest: Manifest) -> Result<(Manifest, bool)> 
                 match config_from_manifest(&manifest, dir) {
                     Ok(cfg) => {
                         let rt = tokio::runtime::Handle::current();
-                        rt.block_on(generator::build(&cfg))?;
+                        let resolved_ver = manifest.config["xui_version"]
+                            .as_str()
+                            .unwrap_or("latest");
+                        rt.block_on(generator::build(&cfg, resolved_ver))?;
                         if let Some(s) = manifest.steps.get_mut(STEP_INSTALL_SH) {
                             s.status = StepStatus::Done;
                             s.files  = vec!["install.sh".to_string()];

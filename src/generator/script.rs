@@ -6,8 +6,8 @@ use crate::os_detect::{self, PkgFormat};
 use crate::wizard::state::{BuildConfig, PackageMode, SslConfig, TargetOs};
 
 /// Render the offline install.sh from the config and write it to the bundle.
-pub fn render(config: &BuildConfig) -> Result<()> {
-    let script = build_script(config);
+pub fn render(config: &BuildConfig, resolved_version: &str) -> Result<()> {
+    let script = build_script(config, resolved_version);
     let dest = format!("{}/install.sh", config.output_dir);
     fs::write(&dest, &script)?;
 
@@ -31,7 +31,7 @@ pub fn render(config: &BuildConfig) -> Result<()> {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 
-fn build_script(c: &BuildConfig) -> String {
+fn build_script(c: &BuildConfig, resolved_version: &str) -> String {
     let arch_suffix = c.arch.xui_suffix();
 
     // ── Package section ───────────────────────────────────────────────────────
@@ -91,23 +91,35 @@ fn build_script(c: &BuildConfig) -> String {
     s.push_str("[[ $EUID -ne 0 ]] && echo -e \"${red}Error: This script must be run as root.${plain}\" && exit 1\n\n");
 
     s.push_str("# ── Safety Confirmation & Detection ─────────────────────────\n");
-    s.push_str("echo -e \"${blue}This is a 3x-ui Offline Installer.${plain}\"\n");
+    s.push_str(&format!("echo -e \"${{blue}}This is a 3x-ui Offline Installer (${{cyan}}{}${{blue}}).${{plain}}\"\n", resolved_version));
     s.push_str("echo -e \"It will install the panel and all dependencies from local files.\"\n\n");
 
+    s.push_str("ACTION=\"install\"\n");
     s.push_str("if [[ -d \"$xui_folder\" ]]; then\n");
-    s.push_str("    echo -e \"${yellow}⚠️  WARNING: Existing 3x-ui installation detected in $xui_folder!${plain}\"\n");
-    s.push_str("    echo -e \"${yellow}   Installing now will overwrite your existing panel binary and service.${plain}\"\n");
-    s.push_str("    read -p \"   Do you want to proceed and OVERWRITE? [y/N]: \" confirm\n");
+    s.push_str("    # Try to detect current version\n");
+    s.push_str("    current_v=$(\"$xui_folder/x-ui\" v 2>/dev/null | grep -oE 'v[0-9]+\\.[0-9]+\\.[0-9]+' | head -n1 || echo \"Unknown\")\n");
+    s.push_str("    echo -e \"${yellow}⚠️  Existing 3x-ui installation detected!${plain}\"\n");
+    s.push_str(&format!("    echo -e \"   Installed Version: ${{cyan}}$current_v${{plain}}\"\n"));
+    s.push_str(&format!("    echo -e \"   Bundle Version:    ${{cyan}}{}${{plain}}\"\n\n", resolved_version));
+    s.push_str("    echo -e \"What would you like to do?\"\n");
+    s.push_str("    echo -e \"  ${cyan}[1] Update${plain} (Keep database, settings, and users)\"\n");
+    s.push_str("    echo -e \"  ${cyan}[2] Reinstall${plain} (Clean install, overwrite everything)\"\n");
+    s.push_str("    echo -e \"  ${cyan}[3] Abort${plain}\"\n");
+    s.push_str("    read -p \"Choose an option [1-3]: \" opt\n");
+    s.push_str("    case $opt in\n");
+    s.push_str("        1) ACTION=\"update\" ;;\n");
+    s.push_str("        2) ACTION=\"reinstall\" ;;\n");
+    s.push_str("        *) echo -e \"${red}Aborted.${plain}\" ; exit 0 ;;\n");
+    s.push_str("    esac\n");
     s.push_str("else\n");
     s.push_str("    read -p \"🚀 Do you want to start the installation? [y/N]: \" confirm\n");
+    s.push_str("    if [[ ! \"$confirm\" =~ ^[Yy]$ ]]; then\n");
+    s.push_str("        echo -e \"${red}Installation aborted.${plain}\"\n");
+    s.push_str("        exit 0\n");
+    s.push_str("    fi\n");
     s.push_str("fi\n\n");
 
-    s.push_str("if [[ ! \"$confirm\" =~ ^[Yy]$ ]]; then\n");
-    s.push_str("    echo -e \"${red}Installation aborted by user.${plain}\"\n");
-    s.push_str("    exit 0\n");
-    s.push_str("fi\n\n");
-
-    s.push_str("echo -e \"${green}Starting 3x-ui installation process...${plain}\"\n\n");
+    s.push_str("echo -e \"${green}Executing $ACTION process...${plain}\"\n\n");
 
     // Package functions
     s.push_str("# ── System Package Installation ─────────────────────────────\n");
@@ -119,7 +131,10 @@ fn build_script(c: &BuildConfig) -> String {
     s.push_str("# ── Stopping Previous Service ───────────────────────────────\n");
     s.push_str(&service_stop);
     s.push_str("\n");
-    s.push_str("rm -rf \"$xui_folder\" 2>/dev/null || true\n\n");
+    s.push_str("if [[ \"$ACTION\" == \"reinstall\" ]]; then\n");
+    s.push_str("    echo -e \"${yellow}Cleaning previous installation...${plain}\"\n");
+    s.push_str("    rm -rf \"$xui_folder\" 2>/dev/null || true\n");
+    s.push_str("fi\n\n");
 
     // Extract binary
     s.push_str("# ── Extracting x-ui Binary ──────────────────────────────────\n");
@@ -145,11 +160,15 @@ fn build_script(c: &BuildConfig) -> String {
 
     // Panel config
     s.push_str("# ── Panel Configuration ─────────────────────────────────────\n");
-    s.push_str("echo -e \"${green}Configuring panel settings...${plain}\"\n");
+    s.push_str("if [[ \"$ACTION\" != \"update\" ]]; then\n");
+    s.push_str("    echo -e \"${green}Configuring panel settings...${plain}\"\n");
     s.push_str(&format!(
-        "\"$xui_folder/x-ui\" setting -username \"{}\" -password \"{}\" -port \"{}\" -webBasePath \"{}\" > /dev/null 2>&1\n\n",
+        "    \"$xui_folder/x-ui\" setting -username \"{}\" -password \"{}\" -port \"{}\" -webBasePath \"{}\" > /dev/null 2>&1\n",
         c.panel_username, c.panel_password, c.panel_port, c.panel_web_base_path
     ));
+    s.push_str("else\n");
+    s.push_str("    echo -e \"${blue}Updating binary only. Existing settings preserved.${plain}\"\n");
+    s.push_str("fi\n\n");
 
     // SSL
     s.push_str("# ── SSL Configuration ───────────────────────────────────────\n");

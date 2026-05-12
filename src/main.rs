@@ -141,11 +141,17 @@ async fn run_download_and_generate(
 
     downloader::download_all(config, manifest).await?;
 
+    // Get the resolved version from manifest for the installer
+    let resolved_ver = manifest.config["xui_version"]
+        .as_str()
+        .unwrap_or("latest")
+        .to_string();
+
     println!("\n{}", style("━".repeat(54)).cyan());
     println!("{}", style("  ⚙️   Building offline install.sh...").cyan().bold());
     println!("{}\n", style("━".repeat(54)).cyan());
 
-    generator::build(config).await?;
+    generator::build(config, &resolved_ver).await?;
 
     // Mark install_sh as done
     manifest.mark_done(out, STEP_INSTALL_SH, vec!["install.sh".to_string()])?;

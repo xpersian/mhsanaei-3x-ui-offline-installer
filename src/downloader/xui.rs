@@ -45,6 +45,12 @@ pub async fn download(
         }
         XuiVersion::Specific(t) => t.clone(),
     };
+
+    // Update manifest with resolved version for installer rendering
+    if let Some(obj) = manifest.config.as_object_mut() {
+        obj.insert("xui_version".to_string(), serde_json::json!(tag));
+    }
+
     println!(
         "  {} Version: {}",
         style("✓").green(),
