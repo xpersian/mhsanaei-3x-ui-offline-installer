@@ -49,6 +49,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config
 
+      - name: Update Version in Cargo.toml
+        shell: bash
+        run: |
+          # Strip 'v' prefix if present
+          CLEAN_VERSION=$(echo "${{ github.event.inputs.version || '0.1.0' }}" | sed 's/^v//')
+          sed -i "s/^version = \".*\"/version = \"$CLEAN_VERSION\"/" Cargo.toml
+
       - run: cargo build --release --target ${{ matrix.target }}
 
       - shell: bash
