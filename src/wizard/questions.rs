@@ -11,7 +11,7 @@ pub async fn run() -> Result<BuildConfig> {
     let theme = ColorfulTheme::default();
 
     // ── Step 1: Modular Updater (Advanced) ───────────────────────────────────
-    println!("{}", style("┌─ Step 1/8 — Build Type (Installer vs Updater) ──────────┐").bold().blue());
+    println!("{}", style("┌─ Step 1/7 — Build Type (Installer vs Updater) ──────────┐").bold().blue());
     println!();
     
     let is_updater = Confirm::with_theme(&theme)
@@ -53,7 +53,7 @@ pub async fn run() -> Result<BuildConfig> {
     println!();
 
     // ── Step 2: OS ───────────────────────────────────────────────────────────
-    println!("{}", style("┌─ Step 2/8 — Target Server Info ─────────────────────────┐").bold().blue());
+    println!("{}", style("┌─ Step 2/7 — Target Server Info ─────────────────────────┐").bold().blue());
     println!();
 
     let os_items = vec![
@@ -117,7 +117,7 @@ pub async fn run() -> Result<BuildConfig> {
     // ── Step 3: Package mode ─────────────────────────────────────────────────
     let mut package_mode = PackageMode::Online;
     if included.system_packages {
-        println!("{}", style("┌─ Step 3/8 — System Package Installation ────────────────┐").bold().blue());
+        println!("{}", style("┌─ Step 3/7 — System Package Installation ────────────────┐").bold().blue());
         println!();
     
         let pkg_mode_items = vec![
@@ -142,24 +142,14 @@ pub async fn run() -> Result<BuildConfig> {
         };
         println!();
     } else {
-        println!("{}", style("┌─ Step 3/8 — System Package Installation (Skipped) ──────┐").bold().blue());
+        println!("{}", style("┌─ Step 3/7 — System Package Installation (Skipped) ──────┐").bold().blue());
         println!("  {} Skipped due to updater settings.\n", style("⏭️").dim());
     }
 
-    // ── Step 4: Server IP/Host ───────────────────────────────────────────────
-    println!("{}", style("┌─ Step 4/8 — Target Server Address ──────────────────────┐").bold().blue());
-    println!();
-    let server_host: String = Input::with_theme(&theme)
-        .with_prompt("Target Server IP or Domain (Used for displaying the access link)")
-        .default("127.0.0.1".to_string())
-        .interact_text()?;
-    let server_host = server_host.trim().to_string();
-    println!();
-
-    // ── Step 5: x-ui version ─────────────────────────────────────────────────
+    // ── Step 4: x-ui version ─────────────────────────────────────────────────
     let mut xui_version = XuiVersion::Latest;
     if included.xui_panel {
-        println!("{}", style("┌─ Step 5/8 — x-ui Version ───────────────────────────────┐").bold().blue());
+        println!("{}", style("┌─ Step 4/7 — x-ui Version ───────────────────────────────┐").bold().blue());
         println!();
         let ver_items = vec!["Latest Version (GitHub)", "Specific Version"];
         let ver_sel = Select::with_theme(&theme).items(&ver_items).default(0).interact()?;
@@ -169,8 +159,87 @@ pub async fn run() -> Result<BuildConfig> {
         };
         println!();
     } else {
-        println!("{}", style("┌─ Step 5/8 — x-ui Version (Skipped) ─────────────────────┐").bold().blue());
+        println!("{}", style("┌─ Step 4/7 — x-ui Version (Skipped) ─────────────────────┐").bold().blue());
         println!("  {} Skipped due to updater settings.\n", style("⏭️").dim());
+    }
+
+    // ── Step 5: SSL ──────────────────────────────────────────────────────────
+    let mut ssl = SslConfig::None;
+    let mut server_host = "127.0.0.1".to_string();
+    
+    if included.ssl {
+        println!("{}", style("┌─ Step 5/7 — SSL Settings ───────────────────────────────┐").bold().blue());
+        println!();
+        let ssl_items = vec![
+            "No SSL",
+            "Custom SSL",
+            "Self-Signed (Recommended)",
+            "Let's Encrypt (For domains/subdomains only)"
+        ];
+        let ssl_sel = Select::with_theme(&theme).items(&ssl_items).default(2).interact()?;
+        ssl = match ssl_sel {
+            0 => {
+                let domain: String = Input::with_theme(&theme)
+                    .with_prompt("Target Server IP or Domain (Used ONLY for displaying the final access link)")
+                    .default("127.0.0.1".to_string())
+                    .interact_text()?;
+                server_host = domain.trim().to_string();
+                SslConfig::None
+            },
+            1 => {
+                let cert: String = Input::with_theme(&theme).with_prompt("Fullchain Path").interact_text()?;
+                let key:  String = Input::with_theme(&theme).with_prompt("Privkey Path").interact_text()?;
+                
+                let domain: String = Input::with_theme(&theme)
+                    .with_prompt("Target Server IP or Domain (Used ONLY for displaying the final access link)")
+                    .default("127.0.0.1".to_string())
+                    .interact_text()?;
+                server_host = domain.trim().to_string();
+                
+                SslConfig::Custom { fullchain_path: cert.trim().into(), privkey_path: key.trim().into() }
+            }
+            2 => {
+                let domain: String = Input::with_theme(&theme)
+                    .with_prompt("Enter the IP or Domain for the certificate")
+                    .interact_text()?;
+                server_host = domain.trim().to_string();
+                
+                println!();
+                let dynamic = Confirm::with_theme(&theme)
+                    .with_prompt("Make installer reusable? (Generate SSL certificate dynamically during installation on target server)")
+                    .default(false)
+                    .interact()?;
+                SslConfig::SelfSigned { common_name: server_host.clone(), dynamic }
+            }
+            _ => {
+                let domain: String = Input::with_theme(&theme)
+                    .with_prompt("Enter the Domain or Subdomain for Let's Encrypt")
+                    .interact_text()?;
+                server_host = domain.trim().to_string();
+                
+                println!();
+                let is_ip = server_host.split('.').count() == 4 && server_host.split('.').all(|part| part.parse::<u8>().is_ok());
+                if is_ip {
+                    println!("  {} Let's Encrypt requires a valid domain or subdomain, not an IP.", style("✗").red());
+                    anyhow::bail!("Invalid domain for Let's Encrypt.");
+                }
+                SslConfig::LetsEncrypt { domain: server_host.clone() }
+            }
+        };
+        println!();
+    } else {
+        println!("{}", style("┌─ Step 5/7 — SSL Settings (Skipped) ─────────────────────┐").bold().blue());
+        println!("  {} Skipped due to updater settings.\n", style("⏭️").dim());
+        
+        // If SSL was skipped entirely, we still need `server_host` for the panel access link if the panel is included.
+        if included.xui_panel {
+            let domain: String = Input::with_theme(&theme)
+                .with_prompt("Target Server IP or Domain (Used ONLY for displaying the final access link)")
+                .default("127.0.0.1".to_string())
+                .interact_text()?;
+            server_host = domain.trim().to_string();
+            println!();
+        }
     }
 
     // ── Step 6: Panel settings ───────────────────────────────────────────────
@@ -180,7 +249,7 @@ pub async fn run() -> Result<BuildConfig> {
     let mut panel_web_base_path = "".to_string();
     
     if included.xui_panel {
-        println!("{}", style("┌─ Step 6/8 — Panel Settings ─────────────────────────────┐").bold().blue());
+        println!("{}", style("┌─ Step 6/7 — Panel Settings ─────────────────────────────┐").bold().blue());
         println!();
         panel_port = prompt::random_port();
         panel_username = prompt::random_string(8);
@@ -191,70 +260,17 @@ pub async fn run() -> Result<BuildConfig> {
         println!("  {} Username:      {}", style("→").green(), style(&panel_username).yellow().bold());
         println!("  {} Password:      {}", style("→").green(), style(&panel_password).yellow().bold());
         println!("  {} Web Path:      /{}", style("→").green(), style(&panel_web_base_path).yellow().bold());
-        println!("  {} Access Link:   http://{}:{}/{}", style("→").green(), style(&server_host).cyan(), style(panel_port).cyan(), style(&panel_web_base_path).cyan());
+        
+        let protocol = if matches!(ssl, SslConfig::None) { "http" } else { "https" };
+        println!("  {} Access Link:   {}://{}:{}/{}", style("→").green(), style(protocol).cyan(), style(&server_host).cyan(), style(panel_port).cyan(), style(&panel_web_base_path).cyan());
         println!();
     } else {
-        println!("{}", style("┌─ Step 6/8 — Panel Settings (Skipped) ───────────────────┐").bold().blue());
+        println!("{}", style("┌─ Step 6/7 — Panel Settings (Skipped) ───────────────────┐").bold().blue());
         println!("  {} Skipped due to updater settings.\n", style("⏭️").dim());
     }
 
-    // ── Step 7: SSL ──────────────────────────────────────────────────────────
-    let mut ssl = SslConfig::None;
-    if included.ssl {
-        println!("{}", style("┌─ Step 7/8 — SSL Settings ───────────────────────────────┐").bold().blue());
-        println!();
-        let ssl_items = vec![
-            "No SSL",
-            "Custom SSL",
-            "Self-Signed (Recommended)",
-            "Let's Encrypt (For domains/subdomains only)"
-        ];
-        let ssl_sel = Select::with_theme(&theme).items(&ssl_items).default(2).interact()?;
-        ssl = match ssl_sel {
-            0 => SslConfig::None,
-            1 => {
-                let cert: String = Input::with_theme(&theme).with_prompt("Fullchain Path").interact_text()?;
-                let key:  String = Input::with_theme(&theme).with_prompt("Privkey Path").interact_text()?;
-                SslConfig::Custom { fullchain_path: cert.trim().into(), privkey_path: key.trim().into() }
-            }
-            2 => {
-                let domain: String = Input::with_theme(&theme)
-                    .with_prompt("Enter the IP or Domain for the certificate")
-                    .default(server_host.clone())
-                    .interact_text()?;
-                let domain = domain.trim().to_string();
-                
-                println!();
-                let dynamic = Confirm::with_theme(&theme)
-                    .with_prompt("Make installer reusable? (Generate SSL certificate dynamically during installation on target server)")
-                    .default(false)
-                    .interact()?;
-                SslConfig::SelfSigned { common_name: domain, dynamic }
-            }
-            _ => {
-                let domain: String = Input::with_theme(&theme)
-                    .with_prompt("Enter the Domain or Subdomain for Let's Encrypt")
-                    .default(if server_host != "127.0.0.1" { server_host.clone() } else { "".to_string() })
-                    .interact_text()?;
-                let domain = domain.trim().to_string();
-                
-                println!();
-                let is_ip = domain.split('.').count() == 4 && domain.split('.').all(|part| part.parse::<u8>().is_ok());
-                if is_ip {
-                    println!("  {} Let's Encrypt requires a valid domain or subdomain, not an IP.", style("✗").red());
-                    anyhow::bail!("Invalid domain for Let's Encrypt.");
-                }
-                SslConfig::LetsEncrypt { domain }
-            }
-        };
-        println!();
-    } else {
-        println!("{}", style("┌─ Step 7/8 — SSL Settings (Skipped) ─────────────────────┐").bold().blue());
-        println!("  {} Skipped due to updater settings.\n", style("⏭️").dim());
-    }
-
-    // ── Step 8: Output Kind ──────────────────────────────────────────────────
-    println!("{}", style("┌─ Step 8/8 — Output File Type ───────────────────────────┐").bold().blue());
+    // ── Step 7: Output Kind ──────────────────────────────────────────────────
+    println!("{}", style("┌─ Step 7/7 — Output File Type ───────────────────────────┐").bold().blue());
     println!();
     let out_items = vec![
         "Self-Extracting (.sh) — Single file, easiest to transfer (Recommended)",
