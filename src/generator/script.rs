@@ -157,49 +157,55 @@ fn build_script(c: &BuildConfig, resolved_version: &str) -> String {
         s.push_str("fi\n\n");
     }
 
-    // Stop old service
-    s.push_str("# ── Stopping Previous Service ───────────────────────────────\n");
-    s.push_str(&service_stop);
-    s.push_str("\n");
-    s.push_str("if [[ \"$ACTION\" == \"reinstall\" ]]; then\n");
-    s.push_str("    echo -e \"${yellow}Cleaning previous installation...${plain}\"\n");
-    s.push_str("    rm -rf \"$xui_folder\" 2>/dev/null || true\n");
-    s.push_str("fi\n\n");
+    if c.included.xui_panel {
+        s.push_str("if [[ \"$ACTION\" != \"update_ssl\" ]]; then\n");
 
-    // Extract binary
-    s.push_str("# ── Extracting x-ui Binary ──────────────────────────────────\n");
-    s.push_str("echo -e \"${green}Installing x-ui binary...${plain}\"\n");
-    s.push_str("mkdir -p \"$(dirname \"$xui_folder\")\"\n");
-    s.push_str(&format!(
-        "tar zxf \"$BUNDLE_DIR/x-ui-linux-{}.tar.gz\" -C \"$(dirname \"$xui_folder\")\"\n",
-        arch_suffix
-    ));
-    s.push_str("mv \"$(dirname \"$xui_folder\")/x-ui\" \"$xui_folder\" 2>/dev/null || true\n");
-    s.push_str("chmod +x \"$xui_folder/x-ui\"\n");
-    s.push_str("chmod +x \"$xui_folder/x-ui.sh\"\n");
-    if arch_suffix == "armv7" {
-        s.push_str("mv \"$xui_folder/bin/xray-linux-armv7\" \"$xui_folder/bin/xray-linux-arm\" 2>/dev/null || true\n");
+        // Stop old service
+        s.push_str("# ── Stopping Previous Service ───────────────────────────────\n");
+        s.push_str(&service_stop);
+        s.push_str("\n");
+        s.push_str("if [[ \"$ACTION\" == \"reinstall\" ]]; then\n");
+        s.push_str("    echo -e \"${yellow}Cleaning previous installation...${plain}\"\n");
+        s.push_str("    rm -rf \"$xui_folder\" 2>/dev/null || true\n");
+        s.push_str("fi\n\n");
+
+        // Extract binary
+        s.push_str("# ── Extracting x-ui Binary ──────────────────────────────────\n");
+        s.push_str("echo -e \"${green}Installing x-ui binary...${plain}\"\n");
+        s.push_str("mkdir -p \"$(dirname \"$xui_folder\")\"\n");
+        s.push_str(&format!(
+            "tar zxf \"$BUNDLE_DIR/x-ui-linux-{}.tar.gz\" -C \"$(dirname \"$xui_folder\")\"\n",
+            arch_suffix
+        ));
+        s.push_str("mv \"$(dirname \"$xui_folder\")/x-ui\" \"$xui_folder\" 2>/dev/null || true\n");
+        s.push_str("chmod +x \"$xui_folder/x-ui\"\n");
+        s.push_str("chmod +x \"$xui_folder/x-ui.sh\"\n");
+        if arch_suffix == "armv7" {
+            s.push_str("mv \"$xui_folder/bin/xray-linux-armv7\" \"$xui_folder/bin/xray-linux-arm\" 2>/dev/null || true\n");
+        }
+        s.push_str("chmod +x \"$xui_folder/bin/\"* 2>/dev/null || true\n\n");
+
+        // CLI manager
+        s.push_str("# ── Installing CLI manager ──────────────────────────────────\n");
+        s.push_str("cp \"$BUNDLE_DIR/x-ui.sh\" /usr/bin/x-ui\n");
+        s.push_str("chmod +x /usr/bin/x-ui\n");
+        s.push_str("mkdir -p /var/log/x-ui\n\n");
+
+        // Panel config
+        s.push_str("# ── Panel Configuration ─────────────────────────────────────\n");
+        s.push_str("if [[ \"$ACTION\" != \"update\" ]]; then\n");
+        s.push_str("    echo -e \"${green}Configuring panel settings...${plain}\"\n");
+        s.push_str(&format!(
+            "    \"$xui_folder/x-ui\" setting -username \"{}\" -password \"{}\" -port \"{}\" -webBasePath \"{}\" > /dev/null 2>&1\n",
+            c.panel_username, c.panel_password, c.panel_port, c.panel_web_base_path
+        ));
+        s.push_str("else\n");
+        s.push_str("    echo -e \"${blue}Updating binary only. Existing settings preserved.${plain}\"\n");
+        s.push_str("fi\n");
+        
+        // Close the if ACTION != update_ssl block
+        s.push_str("fi\n\n");
     }
-    s.push_str("chmod +x \"$xui_folder/bin/\"* 2>/dev/null || true\n\n");
-
-    // CLI manager
-    s.push_str("# ── Installing CLI manager ──────────────────────────────────\n");
-    s.push_str("cp \"$BUNDLE_DIR/x-ui.sh\" /usr/bin/x-ui\n");
-    s.push_str("chmod +x /usr/bin/x-ui\n");
-    s.push_str("mkdir -p /var/log/x-ui\n\n");
-
-    // Panel config
-    s.push_str("# ── Panel Configuration ─────────────────────────────────────\n");
-    s.push_str("if [[ \"$ACTION\" != \"update\" ]]; then\n");
-    s.push_str("    echo -e \"${green}Configuring panel settings...${plain}\"\n");
-    s.push_str(&format!(
-        "    \"$xui_folder/x-ui\" setting -username \"{}\" -password \"{}\" -port \"{}\" -webBasePath \"{}\" > /dev/null 2>&1\n",
-        c.panel_username, c.panel_password, c.panel_port, c.panel_web_base_path
-    ));
-    s.push_str("else\n");
-    s.push_str("    echo -e \"${blue}Updating binary only. Existing settings preserved.${plain}\"\n");
-    s.push_str("fi\n");
-    s.push_str("fi\n\n");
 
     // SSL
     s.push_str("# ── SSL Configuration ───────────────────────────────────────\n");
