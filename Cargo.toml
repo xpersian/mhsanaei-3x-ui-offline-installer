@@ -28,4 +28,4 @@ flate2         = "1.0"
 instant-acme = "0.8.5"
 acme2 = "0.5.1"
 base64 = "0.22.1"
-openssl = "0.10.80"
+openssl = { version = "0.10.80", features = ["vendored"] }
